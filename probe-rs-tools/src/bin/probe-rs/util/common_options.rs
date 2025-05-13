@@ -157,23 +157,19 @@ impl LoadedProbeOptions {
     }
 
     /// Add targets contained in file given by --chip-description-path
-    /// to probe-rs registry.
+    /// to probe-rs registry.  Silently ignores missing files.
     ///
     /// Note: should be called before any functions in [ProbeOptions].
     fn maybe_load_chip_desc(&self) -> Result<(), OperationError> {
         if let Some(ref cdp) = self.0.chip_description_path {
-            let file = File::open(Path::new(cdp)).map_err(|error| {
-                OperationError::ChipDescriptionNotFound {
-                    source: error,
-                    path: cdp.clone(),
-                }
-            })?;
-            probe_rs::config::add_target_from_yaml(file).map_err(|error| {
-                OperationError::FailedChipDescriptionParsing {
-                    source: error,
-                    path: cdp.clone(),
-                }
-            })?;
+            if let Ok(file) = File::open(Path::new(cdp)) {
+                probe_rs::config::add_target_from_yaml(file).map_err(|error| {
+                    OperationError::FailedChipDescriptionParsing {
+                        source: error,
+                        path: cdp.clone(),
+                    }
+                })?;
+            }
         }
 
         Ok(())
@@ -479,6 +475,7 @@ pub enum OperationError {
         path: PathBuf,
     },
 
+    #[allow(unused)]
     #[error("Failed to open the chip description '{path}'.")]
     ChipDescriptionNotFound {
         source: std::io::Error,
